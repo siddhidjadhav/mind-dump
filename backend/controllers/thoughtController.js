@@ -1,23 +1,51 @@
 const Thought = require('../models/Thought');
+const { categorizeText } = require('../utils/categorize');
 
 exports.saveThought = async (req, res) => {
   try {
-    const { transcription, category } = req.body;
-    const userId = req.userId;
+    console.log("👤 userId from token:", req.userId); // 🧪 Debug here
+    const { transcription, timestamp } = req.body;
 
-    const newThought = await Thought.create({ userId, transcription, category });
-    res.status(201).json({ message: 'Thought saved', thought: newThought });
+    const category = categorizeText(transcription);
+    const thought = new Thought({
+      user: req.userId,
+      transcription,
+      category,
+      timestamp,
+    });
+
+    await thought.save();
+    res.status(201).json(thought);
   } catch (err) {
-    console.error('Save thought error:', err);
-    res.status(500).json({ error: 'Failed to save thought' });
+    console.error('Error saving thought:', err);
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
 exports.getUserThoughts = async (req, res) => {
   try {
-    const thoughts = await Thought.find({ userId: req.userId }).sort({ timestamp: -1 });
-    res.json(thoughts);
+    const thoughts = await Thought.find({ user: req.userId }).sort({ timestamp: -1 });
+    res.status(200).json(thoughts);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch thoughts' });
+    console.error('Error fetching thoughts:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+exports.deleteThought = async (req, res) => {
+  try {
+    const thought = await Thought.findOneAndDelete({
+      _id: req.params.id,
+      user: req.userId,
+    });
+
+    if (!thought) {
+      return res.status(404).json({ error: 'Thought not found or unauthorized' });
+    }
+
+    res.status(200).json({ message: 'Thought deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting thought:', err);
+    res.status(500).json({ error: 'Server error' });
   }
 };

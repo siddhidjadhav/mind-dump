@@ -3,16 +3,10 @@ import React from 'react';
 export default function ThoughtCard({ thought, onDelete }) {
   const { transcription, category = 'Uncategorized', timestamp } = thought;
 
-  const date = new Date(timestamp);
-  const formattedDate = !isNaN(date.getTime())
-    ? date.toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    : 'Date Unavailable';
+  const formattedDate = new Date(timestamp).toLocaleString('en-US', {
+    year: 'numeric', month: 'short', day: '2-digit',
+    hour: '2-digit', minute: '2-digit'
+  });
 
   const fullCategory = category.replace(/ > /g, ' → ');
 
@@ -29,17 +23,17 @@ export default function ThoughtCard({ thought, onDelete }) {
     'Work & Career → Job Search': 'bg-lime-100 text-lime-800',
     'Work & Career → Productivity': 'bg-green-100 text-green-800',
 
+    'Education → Research & Thesis': 'bg-indigo-100 text-indigo-800',
     'Education → School / College Topics': 'bg-sky-100 text-sky-800',
     'Education → Assignments & Exams': 'bg-blue-100 text-blue-800',
-    'Education → Learning New Skills': 'bg-indigo-100 text-indigo-800',
+    'Education → Learning New Skills': 'bg-teal-100 text-teal-800',
     'Education → Online Courses': 'bg-cyan-100 text-cyan-800',
-    'Education → Study Plans': 'bg-teal-100 text-teal-800',
+    'Education → Study Plans': 'bg-emerald-100 text-emerald-800',
 
     'Science & Technology → Computer Science → Programming': 'bg-emerald-100 text-emerald-800',
     'Science & Technology → Computer Science → AI & ML': 'bg-green-100 text-green-800',
     'Science & Technology → Computer Science → Web/Mobile Development': 'bg-lime-100 text-lime-800',
     'Science & Technology → Computer Science → Data Structures': 'bg-teal-100 text-teal-800',
-
     'Science & Technology → Engineering': 'bg-yellow-100 text-yellow-800',
     'Science & Technology → Mathematics': 'bg-purple-100 text-purple-800',
     'Science & Technology → Space & Physics': 'bg-indigo-100 text-indigo-800',
@@ -93,23 +87,25 @@ export default function ThoughtCard({ thought, onDelete }) {
   const badgeClass = categoryColors[fullCategory] || categoryColors['Uncategorized'];
 
   return (
-    <div className="bg-white shadow-md rounded-2xl p-6 space-y-5 border border-gray-100 relative">
-      {onDelete && (
-        <button
-          onClick={onDelete}
-          className="absolute top-3 right-3 text-gray-400 hover:text-red-500 transition text-sm"
-          aria-label="Delete thought"
-        >
-          ✖
-        </button>
-      )}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-y-3 sm:gap-x-4">
-        <div className={`text-xs sm:text-sm font-semibold px-4 py-2 rounded-full ${badgeClass}`}>
+    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 relative space-y-4 transition hover:shadow-md">
+      <div className="flex justify-between items-start">
+        <div className={`text-xs font-semibold px-3 py-1 rounded-full ${badgeClass}`}>
           {fullCategory}
         </div>
-        <div className="text-sm text-gray-500 px-2 py-1">{formattedDate}</div>
+        {onDelete && (
+          <button
+            onClick={() => {
+              if (window.confirm('Delete this thought?')) onDelete();
+            }}
+            className="text-gray-400 hover:text-red-500 transition text-sm font-bold"
+            title="Delete"
+          >
+            ×
+          </button>
+        )}
       </div>
-      <p className="text-gray-800 text-[15px] leading-relaxed whitespace-pre-wrap">{transcription}</p>
+      <p className="text-sm text-gray-800 whitespace-pre-wrap">{transcription}</p>
+      <div className="text-xs text-gray-500 text-right">{formattedDate}</div>
     </div>
   );
 }

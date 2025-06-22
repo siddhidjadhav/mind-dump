@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, MicOff, Play, Send } from 'lucide-react';
+import { Mic, MicOff, Play, Send, X } from 'lucide-react';
 
 const MicInput = ({ onSubmit, setIsProcessing }) => {
   const [isRecording, setIsRecording] = useState(false);
@@ -43,13 +43,9 @@ const MicInput = ({ onSubmit, setIsProcessing }) => {
         setTranscription(finalTranscript.trim());
       };
 
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event);
-      };
-
+      recognition.onerror = (event) => console.error('Speech recognition error:', event);
       recognition.start();
       recognitionRef.current = recognition;
-
     } catch (err) {
       console.error("Microphone access error:", err);
       alert("Microphone access denied or not available.");
@@ -61,9 +57,7 @@ const MicInput = ({ onSubmit, setIsProcessing }) => {
       mediaRecorder.stop();
       mediaRecorder.stream.getTracks().forEach(track => track.stop());
     }
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
+    if (recognitionRef.current) recognitionRef.current.stop();
     setIsRecording(false);
   };
 
@@ -76,15 +70,19 @@ const MicInput = ({ onSubmit, setIsProcessing }) => {
     }
   };
 
-  const handleSubmit = () => {
-    if (!transcription.trim()) return alert("No text captured from mic.");
+const handleSubmit = async () => {
+  if (!transcription.trim()) return alert("No text captured from mic.");
+  try {
     setIsProcessing(true);
-    setTimeout(() => {
-      onSubmit({ content: transcription });
-      setIsProcessing(false);
-      setTranscription('');
-    }, 500);
-  };
+    await onSubmit({ content: transcription });
+    setTranscription('');
+  } catch (error) {
+    console.error('Error submitting mic input:', error);
+    alert('Failed to submit. Check connection or backend.');
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   return (
     <div className="w-full flex flex-col items-center gap-8">
@@ -102,6 +100,12 @@ const MicInput = ({ onSubmit, setIsProcessing }) => {
         >
           {isRecording ? <MicOff className="w-10 h-10 text-white" /> : <Mic className="w-10 h-10 text-white" />}
         </motion.button>
+        <button
+          onClick={stopRecording}
+          className="absolute top-4 right-4 text-gray-500 hover:text-red-500"
+        >
+          <X className="w-6 h-6" />
+        </button>
       </motion.div>
 
       <p className="text-slate-600 text-center text-lg font-medium">

@@ -5,7 +5,8 @@ import MicInput from './components/MicInput';
 import Login from './components/Login';
 import { categorizeText } from './utils/categorize';
 import { motion } from 'framer-motion';
-import { Mic, Type } from 'lucide-react';
+import { Mic, Type, LogOut } from 'lucide-react';
+import axios from 'axios';
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -20,76 +21,98 @@ export default function App() {
   };
 
   const fetchThoughts = async () => {
-    const res = await fetch('http://localhost:5050/api/thoughts', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    setThoughts(data);
-  };
-
-  const saveThought = async (thought) => {
-    await fetch('http://localhost:5050/api/thoughts', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(thought),
-    });
+    try {
+      const res = await axios.get('http://localhost:5050/api/thoughts', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setThoughts(res.data);
+    } catch (err) {
+      console.error('Failed to fetch thoughts:', err);
+    }
   };
 
   useEffect(() => {
-    if (token) fetchThoughts();
+    if (token) {
+      fetchThoughts();
+    }
   }, [token]);
 
   const handleTextSubmit = async () => {
-    if (!textInput.trim()) return alert("✍️ Please enter some text!");
-    const newThought = {
-      transcription: textInput,
-      category: categorizeText(textInput),
-      timestamp: new Date().toISOString()
-    };
-    setThoughts(prev => [newThought, ...prev]);
-    await saveThought(newThought);
+  if (!textInput.trim()) return alert("✍️ Please enter some text!");
+  const newThought = {
+    transcription: textInput,
+    category: categorizeText(textInput),
+    timestamp: new Date().toISOString()
+  };
+  try {
+    const res = await axios.post(
+      'http://localhost:5050/api/thoughts',
+      newThought,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    setThoughts(prev => [res.data, ...prev]);
     setTextInput('');
     setShowInputs(false);
-  };
+  } catch (err) {
+    console.error('Failed to save thought:', err);
+    alert('❌ Failed to save thought. Check server.');
+  }
+};
+
 
   const handleMicSubmit = async (newThought) => {
     const categorizedThought = {
-      ...newThought,
       transcription: newThought.content,
       category: categorizeText(newThought.content),
       timestamp: new Date().toISOString()
     };
-    setThoughts(prev => [categorizedThought, ...prev]);
-    await saveThought(categorizedThought);
-    setShowInputs(false);
+    try {
+      const res = await axios.post(
+        'http://localhost:5050/api/thoughts',
+        categorizedThought,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setThoughts(prev => [res.data, ...prev]);
+      setShowInputs(false);
+    } catch (err) {
+      console.error('Failed to save mic thought:', err);
+    }
   };
 
-  const handleDelete = (indexToDelete) => {
-    setThoughts(prev => prev.filter((_, i) => i !== indexToDelete));
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`http://localhost:5050/api/thoughts/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setThoughts(prev => prev.filter((thought) => thought._id !== id));
+    } catch (err) {
+      console.error('Failed to delete thought:', err);
+    }
   };
 
-  const groupedThoughts = thoughts.reduce((acc, thought, index) => {
+  const groupedThoughts = thoughts.reduce((acc, thought) => {
     const category = thought.category || "Uncategorized";
     if (!acc[category]) acc[category] = [];
-    acc[category].push({ ...thought, index });
+    acc[category].push(thought);
     return acc;
   }, {});
 
   if (!token) return <Login setToken={setToken} />;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-white px-4 sm:px-8 md:px-16 py-10 font-sans">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-white px-4 sm:px-8 md:px-16 py-10 font-sans relative">
+      {/* Logout Button */}
+      <div className="absolute top-4 right-4">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 px-4 py-2 bg-white text-indigo-600 border border-indigo-300 rounded-full shadow hover:bg-indigo-50 hover:shadow-md transition-all font-medium"
+        >
+          <LogOut className="w-4 h-4" /> Logout
+        </button>
+      </div>
+
       <div className="max-w-6xl mx-auto space-y-12">
-        <header className="relative text-center space-y-4">
-          <button
-            onClick={handleLogout}
-            className="absolute top-0 right-0 mt-4 mr-4 text-sm text-indigo-600 underline"
-          >
-            Logout
-          </button>
+        <header className="text-center space-y-4">
           <h1 className="text-5xl lg:text-6xl font-bold text-indigo-700 tracking-tight">🧠 Mind Dump</h1>
           <p className="text-xl text-slate-600 font-medium">
             Speak or type. We’ll organize it beautifully.
@@ -118,8 +141,15 @@ export default function App() {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="bg-white p-6 sm:p-8 rounded-3xl shadow-xl border border-gray-200 space-y-6"
+            className="bg-white p-6 sm:p-8 rounded-3xl shadow-xl border border-gray-200 space-y-6 relative"
           >
+            <button
+              onClick={() => setShowInputs(false)}
+              className="absolute top-4 right-4 text-xl font-bold text-gray-400 hover:text-red-500"
+            >
+              ×
+            </button>
+
             <h2 className="text-2xl font-semibold text-gray-800">Add Your Thought</h2>
             {showInputs === 'mic' && <MicInput onSubmit={handleMicSubmit} setIsProcessing={setIsProcessing} />}
             {showInputs === 'text' && (
@@ -129,14 +159,6 @@ export default function App() {
                 handleTextSubmit={handleTextSubmit}
               />
             )}
-            <div className="pt-4 text-center">
-              <button
-                onClick={() => setShowInputs(false)}
-                className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium rounded-full shadow-sm"
-              >
-                ➕ Add Another Thought
-              </button>
-            </div>
           </motion.section>
         )}
 
@@ -148,7 +170,6 @@ export default function App() {
 
         <section className="space-y-10">
           <h2 className="text-2xl font-semibold text-gray-800">🧾 Your Thoughts</h2>
-
           {Object.keys(groupedThoughts).length === 0 ? (
             <p className="text-center text-lg text-gray-500 mt-8">
               No thoughts yet. Try speaking or typing to get started!
@@ -160,14 +181,23 @@ export default function App() {
                   {category.replace(/ > /g, ' → ')}
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {items.map((thought, index) => (
+                  {items.map((thought) => (
                     <motion.div
-                      key={thought.index}
+                      key={thought._id}
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <ThoughtCard thought={thought} onDelete={() => handleDelete(thought.index)} />
+                      <ThoughtCard
+                        thought={thought}
+                        onDelete={() => {
+                          if (thought._id) {
+                            handleDelete(thought._id);
+                          } else {
+                            console.error('No ID found in thought:', thought);
+                          }
+                        }}
+                      />
                     </motion.div>
                   ))}
                 </div>

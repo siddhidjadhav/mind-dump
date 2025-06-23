@@ -14,6 +14,7 @@ export default function App() {
   const [thoughts, setThoughts] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showInputs, setShowInputs] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -32,33 +33,33 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (token) {
-      fetchThoughts();
-    }
+    if (token) fetchThoughts();
+    const handleScroll = () => setScrolled(window.scrollY > 80);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, [token]);
 
   const handleTextSubmit = async () => {
-  if (!textInput.trim()) return alert("✍️ Please enter some text!");
-  const newThought = {
-    transcription: textInput,
-    category: categorizeText(textInput),
-    timestamp: new Date().toISOString()
+    if (!textInput.trim()) return alert("✍️ Please enter some text!");
+    const newThought = {
+      transcription: textInput,
+      category: categorizeText(textInput),
+      timestamp: new Date().toISOString()
+    };
+    try {
+      const res = await axios.post(
+        'http://localhost:5050/api/thoughts',
+        newThought,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setThoughts(prev => [res.data, ...prev]);
+      setTextInput('');
+      setShowInputs(false);
+    } catch (err) {
+      console.error('Failed to save thought:', err);
+      alert('❌ Failed to save thought. Check server.');
+    }
   };
-  try {
-    const res = await axios.post(
-      'http://localhost:5050/api/thoughts',
-      newThought,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    setThoughts(prev => [res.data, ...prev]);
-    setTextInput('');
-    setShowInputs(false);
-  } catch (err) {
-    console.error('Failed to save thought:', err);
-    alert('❌ Failed to save thought. Check server.');
-  }
-};
-
 
   const handleMicSubmit = async (newThought) => {
     const categorizedThought = {
@@ -100,26 +101,51 @@ export default function App() {
   if (!token) return <Login setToken={setToken} />;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-white px-4 sm:px-8 md:px-16 py-10 font-sans relative">
-      {/* Logout Button */}
-      <div className="absolute top-4 right-4">
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 px-4 py-2 bg-white text-indigo-600 border border-indigo-300 rounded-full shadow hover:bg-indigo-50 hover:shadow-md transition-all font-medium"
-        >
-          <LogOut className="w-4 h-4" /> Logout
-        </button>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-white font-sans">
+      {scrolled && (
+        <nav className="fixed top-0 left-0 w-full z-50 bg-white/90 backdrop-blur border-b border-gray-200 shadow-sm px-4 sm:px-8 md:px-16 py-3 flex items-center justify-between">
+          <span className="text-indigo-700 font-bold text-xl">🧠 Mind Dump</span>
+          <div className="flex gap-4">
+            <button
+              onClick={() => setShowInputs('mic')}
+              className="flex items-center gap-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 px-4 py-2 rounded-full border border-indigo-300 text-sm font-medium"
+            >
+              <Mic className="w-4 h-4" /> Mic
+            </button>
+            <button
+              onClick={() => setShowInputs('text')}
+              className="flex items-center gap-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-4 py-2 rounded-full border border-emerald-300 text-sm font-medium"
+            >
+              <Type className="w-4 h-4" /> Text
+            </button>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 bg-white text-indigo-600 border border-indigo-300 rounded-full px-4 py-2 text-sm font-medium hover:bg-indigo-50"
+          >
+            <LogOut className="w-4 h-4" /> Logout
+          </button>
+        </nav>
+      )}
 
-      <div className="max-w-6xl mx-auto space-y-12">
-        <header className="text-center space-y-4">
+      <div className={`pt-${scrolled ? '24' : '10'} px-4 sm:px-8 md:px-16 max-w-6xl mx-auto space-y-12 pb-40`}>
+        {!scrolled && (
+        <header className="relative text-center space-y-4 mt-8">
+          <button
+            onClick={handleLogout}
+            className="absolute top-0 right-0 flex items-center gap-2 bg-white text-indigo-600 border border-indigo-300 rounded-full px-4 py-2 text-sm font-medium hover:bg-indigo-50"
+          >
+            <LogOut className="w-4 h-4" /> Logout
+          </button>
           <h1 className="text-5xl lg:text-6xl font-bold text-indigo-700 tracking-tight">🧠 Mind Dump</h1>
           <p className="text-xl text-slate-600 font-medium">
             Speak or type. We’ll organize it beautifully.
           </p>
         </header>
 
-        {!showInputs && (
+        )}
+
+        {!showInputs && !scrolled && (
           <div className="flex flex-col sm:flex-row justify-center gap-6 mt-10">
             <button
               onClick={() => setShowInputs('mic')}
@@ -191,11 +217,8 @@ export default function App() {
                       <ThoughtCard
                         thought={thought}
                         onDelete={() => {
-                          if (thought._id) {
-                            handleDelete(thought._id);
-                          } else {
-                            console.error('No ID found in thought:', thought);
-                          }
+                          if (thought._id) handleDelete(thought._id);
+                          else console.error('No ID found in thought:', thought);
                         }}
                       />
                     </motion.div>

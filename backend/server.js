@@ -16,7 +16,12 @@ app.use(express.json());
 
 // Routes
 app.use('/api', thoughtRoutes);
-app.use('/api/auth', authRoutes); // Only if you have auth setup
+app.use('/api/auth', authRoutes); // Optional auth routes
+
+// ✅ Root route (for health check or "Cannot GET /" fix)
+app.get('/', (req, res) => {
+  res.send('🧠 Mind Dump backend is running!');
+});
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI)

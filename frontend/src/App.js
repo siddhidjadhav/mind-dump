@@ -203,7 +203,7 @@ export default function App() {
           ) : (
             Object.entries(groupedThoughts).map(([category, items]) => (
               <div key={category} className="space-y-4">
-                <h3 className="text-xl font-semibold text-indigo-900 border-b pb-1 sticky top-0 bg-white/90 z-10">
+                <h3 className="sticky top-0 z-10 text-white text-lg font-semibold px-4 py-2 rounded-t-xl shadow bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">
                   {category.replace(/ > /g, ' → ')}
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

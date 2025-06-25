@@ -18,6 +18,10 @@ app.use(express.json());
 app.use('/api', thoughtRoutes);
 app.use('/api/auth', authRoutes); // Optional auth routes
 
+app.get('/', (req, res) => {
+  res.send('🧠 Mind Dump backend is running!');
+});
+
 // ✅ Root route (for health check or "Cannot GET /" fix)
 app.get('/', (req, res) => {
   res.send('🧠 Mind Dump backend is running!');
